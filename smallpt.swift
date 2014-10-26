@@ -5,6 +5,35 @@
 
 import Foundation
 
+class OutputStream : OutputStreamType {
+  let handle : NSFileHandle
+  init(handle : NSFileHandle) {
+    self.handle = handle
+  }
+  func write(string: String) {
+    if let asUTF8 = string.dataUsingEncoding(NSUTF8StringEncoding) {
+      handle.writeData(asUTF8)
+    }
+  }
+}
+
+class StandardErrorOutputStream: OutputStream {
+  init() {
+    let stderr = NSFileHandle.fileHandleWithStandardError()
+    super.init(handle:stderr)
+  }
+}
+
+class FileStream : OutputStream {
+  init(path : String) {
+    let d = NSFileManager.defaultManager()
+    d.createFileAtPath(path, contents: nil, attributes: nil)
+    let h = NSFileHandle(forWritingAtPath: path)
+    super.init(handle:h!)
+  }
+}
+
+let stderr = StandardErrorOutputStream()
 struct Vec {
   let x, y, z : Double
   init() { self.init(x:0, y:0, z:0) }
@@ -60,7 +89,7 @@ func intersect(r : Ray, inout t: Double, inout id: Int) -> Bool {
   let n = spheres.count
   let inf=1e20
   var t = inf
-  for (var i = n; i >= 0;i--) {
+  for (var i = n-1; i >= 0;i--) {
     let d = spheres[i].intersect(r)
     if(d != 0.0 && d<t){t=d;id=i;}
   }
@@ -123,35 +152,6 @@ func radiance(r: Ray, depth: Int, Xi : drand) -> Vec {
     radiance(reflRay,depth,Xi) * Re + radiance(Ray(o: x, d: tdir),depth,Xi)*Tr);
 }
 
-class OutputStream : OutputStreamType {
-  let handle : NSFileHandle
-  init(handle : NSFileHandle) {
-    self.handle = handle
-  }
-  func write(string: String) {
-    if let asUTF8 = string.dataUsingEncoding(NSUTF8StringEncoding) {
-      handle.writeData(asUTF8)
-    }
-  }
-}
-
-class StandardErrorOutputStream: OutputStream {
-  init() {
-    let stderr = NSFileHandle.fileHandleWithStandardError()
-    super.init(handle:stderr)
-  }
-}
-
-class FileStream : OutputStream {
-  init(path : String) {
-    let d = NSFileManager.defaultManager()
-    d.createFileAtPath(path, contents: nil, attributes: nil)
-    let h = NSFileHandle(forWritingAtPath: path)
-    super.init(handle:h!)
-  }
-}
-
-let stderr = StandardErrorOutputStream()
 
 func main() {
   let argc = C_ARGC, argv = C_ARGV
