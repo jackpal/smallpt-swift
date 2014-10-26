@@ -76,8 +76,8 @@ struct drand {
 }
 
 func radiance(r: Ray, depth: Int, Xi : drand) -> Vec {
-  var t : Double                               // distance to intersection
-  var id : Int                               // id of intersected object
+  var t : Double = 0                               // distance to intersection
+  var id : Int  = 0                             // id of intersected object
   if (!intersect(r, &t, &id)) {return Vec() } // if miss, return black
   let obj = spheres[id]        // the hit object
   let x=r.o+r.d*t
