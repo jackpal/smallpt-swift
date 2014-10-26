@@ -181,8 +181,7 @@ func main() {
   for (var y=0; y<h; y++) {                       // Loop over image rows
     let spp = samps*4
     let percent = 100.0 * Double(y)/Double(h-1)
-    let status : String = "\rRendering (\(spp) spp) \(percent)%"
-    stderr.write(status)
+    stderr.write(String(format:"\rRendering (%d spp) %.2f%%", spp, percent))
     for (var x = 0; x < w; x++) {   // Loop cols
       let Xi = drand(a:UInt16(0xffff & (y * y * y)))
       var r = Vec()
