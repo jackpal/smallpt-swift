@@ -89,9 +89,9 @@ func intersect(r : Ray, inout t: Double, inout id: Int) -> Bool {
   let n = spheres.count
   let inf=1e20
   var t = inf
-  for (var i = n-1; i >= 0;i--) {
+  for (var i = n-1; i >= 0; i--) {
     let d = spheres[i].intersect(r)
-    if(d != 0.0 && d<t){t=d;id=i;}
+    if (d != 0.0 && d<t){t=d;id=i;}
   }
   return t<inf
 }
