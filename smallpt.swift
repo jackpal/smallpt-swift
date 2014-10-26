@@ -155,7 +155,9 @@ func radiance(r: Ray, depth: Int, Xi : drand) -> Vec {
 
 func main() {
   let argc = C_ARGC, argv = C_ARGV
-  let w=1024, h=768, samps = argc==2 ? Int(atoi(argv[1])/4) : 1 // # samples
+  // let w=1024, h=768
+  let w = 40, h = 30
+  let samps = argc==2 ? Int(atoi(argv[1])/4) : 1 // # samples
   let cam = Ray(o:Vec(x:50,y:52,z:295.6), d:Vec(x:0,y:-0.042612,z:-1).norm()) // cam pos, dir
   let cx = Vec(x:Double(w) * 0.5135 / Double(h), y:0, z:0)
   let cy = (cx % cam.d).norm()*0.5135
@@ -191,7 +193,7 @@ func main() {
   let f = FileStream(path: "image.ppm")         // Write image to PPM file.
   f.write("P3\n\(w) \(h)\n\(255)\n")
   for (var i=0; i<w*h; i++) {
-    f.write("\(toInt(c[i].x)) \(toInt(c[i].y)) \(toInt(c[i].z))")
+    f.write("\(toInt(c[i].x)) \(toInt(c[i].y)) \(toInt(c[i].z)) ")
   }
 }
 
