@@ -1,2 +1,5 @@
 # Ignore ppm files
 *.ppm
+
+# Ignore compiled c++ version
+smallpt
