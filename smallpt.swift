@@ -93,7 +93,7 @@ let spheres :[Sphere] = [//Scene: radius, position, emission, color, material
   Sphere(rad:16.5,p:Vec(x:73,y:16.5,z:78),       e:Vec(), c:Vec(x:1,y:1,z:1)*0.999,  refl:Refl_t.REFR),//Glas
   Sphere(rad:600, p:Vec(x:50,y:681.6-0.27,z:81.6),e:Vec(x:12,y:12,z:12),   c:Vec(),  refl:Refl_t.DIFF) //Lite
 ]
-func clamp(x : Double) -> Double { return x<0 ? 0 : x>1 ? 1 : x; }
+func clamp(x : Double) -> Double { return x < 0 ? 0 : x > 1 ? 1 : x; }
 
 func toInt(x : Double) -> Int { return Int(pow(clamp(x),1/2.2)*255+0.5); }
 
@@ -167,48 +167,59 @@ func radiance(r: Ray, depthIn: Int, Xi : drand) -> Vec {
   }
 }
 
-
 func main() {
-  let argc = C_ARGC, argv = C_ARGV
-  let w=1024, h=768
-  // let w = 40, h = 30
-  let samps = argc==2 ? Int(atoi(argv[1])/4) : 1 // # samples
-  let cam = Ray(o:Vec(x:50,y:52,z:295.6), d:Vec(x:0,y:-0.042612,z:-1).norm()) // cam pos, dir
-  let cx = Vec(x:Double(w) * 0.5135 / Double(h), y:0, z:0)
-  let cy = (cx % cam.d).norm()*0.5135
-  var c = Array<Vec>(count:w*h, repeatedValue:Vec())
-  // #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
-  for (var y=0; y<h; y++) {                       // Loop over image rows
-    let spp = samps*4
-    let percent = 100.0 * Double(y)/Double(h-1)
-    stderr.write(String(format:"\rRendering (%d spp) %.2f%%", spp, percent))
-    for (var x = 0; x < w; x++) {   // Loop cols
+  let mainQueue = dispatch_get_main_queue()
+  let collectQueue = dispatch_queue_create("collectQueue", nil)
+  dispatch_async(mainQueue) {
+    let argc = C_ARGC, argv = C_ARGV
+    let w=1024, h=768
+    // let w = 160, h = 120
+    let samps = argc==2 ? Int(atoi(argv[1])/4) : 1 // # samples
+    let cam = Ray(o:Vec(x:50,y:52,z:295.6), d:Vec(x:0,y:-0.042612,z:-1).norm()) // cam pos, dir
+    let cx = Vec(x:Double(w) * 0.5135 / Double(h), y:0, z:0)
+    let cy = (cx % cam.d).norm()*0.5135
+    var c = Array<Vec>(count:w*h, repeatedValue:Vec())
+    let globalQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
+    dispatch_apply(UInt(h), globalQueue) {
+      let y = Int($0)
       let Xi = drand(a:UInt16(0xffff & (y * y * y)))
-      var r = Vec()
-      for (var sy=0; sy<2; sy++) {     // 2x2 subpixel rows
+      let spp = samps*4
+      let percent = 100.0 * Double(y)/Double(h-1)
+      stderr.write(String(format:"\rRendering (%d spp) %.2f%%", spp, percent))
+      for (var x = 0; x < w; x++) {   // Loop cols
         let i=(h-y-1)*w+x
-        for (var sx=0; sx<2; sx++) {        // 2x2 subpixel cols
-          for (var s=0; s < samps; s++) {
-            let r1=2*Xi.next(), dx=r1<1 ? sqrt(r1)-1: 1-sqrt(2-r1)
-            let r2=2*Xi.next(), dy=r2<1 ? sqrt(r2)-1: 1-sqrt(2-r2)
-            let part1 = ( ( (Double(sx)+0.5 + Double(dx))/2 + Double(x))/Double(w) - 0.5)
-            let part2 =  ( ( (Double(sy)+0.5 + Double(dy))/2 + Double(y))/Double(h) - 0.5)
-            let d = cx * part1
-                + cy * part2
-                + cam.d
-            let rr = radiance(Ray(o:cam.o+d*140, d:d.norm()), 0, Xi)
-            r = r +  rr * (1.0 / Double(samps))
-          } // Camera rays are pushed ^^^^^ forward to start in interior
+        var r = Vec()
+        for (var sy=0; sy<2; sy++) {     // 2x2 subpixel rows
+          for (var sx=0; sx<2; sx++) {        // 2x2 subpixel cols
+            for (var s=0; s < samps; s++) {
+              let r1=2*Xi.next(), dx=r1<1 ? sqrt(r1)-1: 1-sqrt(2-r1)
+              let r2=2*Xi.next(), dy=r2<1 ? sqrt(r2)-1: 1-sqrt(2-r2)
+              let part1 = ( ( (Double(sx)+0.5 + Double(dx))/2 + Double(x))/Double(w) - 0.5)
+              let part2 =  ( ( (Double(sy)+0.5 + Double(dy))/2 + Double(y))/Double(h) - 0.5)
+              let d = cx * part1
+                  + cy * part2
+                  + cam.d
+              let rr = radiance(Ray(o:cam.o+d*140, d:d.norm()), 0, Xi)
+              r = r + rr * (1.0 / Double(samps))
+            } // Camera rays are pushed ^^^^^ forward to start in interior
+          }
         }
-        c[i] = c[i] + Vec(x:clamp(r.x), y:clamp(r.y), z:clamp(r.z))*0.25
+        let result = r*0.25
+        dispatch_async(collectQueue) {
+          c[i] = result
+        }
       }
     }
+    dispatch_async(collectQueue) {
+      let f = FileStream(path: "image.ppm")         // Write image to PPM file.
+      f.write("P3\n\(w) \(h)\n\(255)\n")
+      for (var i=0; i<w*h; i++) {
+        f.write("\(toInt(c[i].x)) \(toInt(c[i].y)) \(toInt(c[i].z)) ")
+      }
+      exit(0)
+    }
   }
-  let f = FileStream(path: "image.ppm")         // Write image to PPM file.
-  f.write("P3\n\(w) \(h)\n\(255)\n")
-  for (var i=0; i<w*h; i++) {
-    f.write("\(toInt(c[i].x)) \(toInt(c[i].y)) \(toInt(c[i].z)) ")
-  }
+  dispatch_main();
 }
 
 main()
