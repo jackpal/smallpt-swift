@@ -10,7 +10,9 @@ Setup
 
 Build and run
 
-    ./smallpt.swift && open image.ppm
+    xcrun swiftc -O -sdk `xcrun --show-sdk-path --sdk macosx` smallpt.swift
+    ./smallpt
+    open image.ppm
 
 You can also supply the number of samples per pixel:
 
@@ -18,12 +20,14 @@ You can also supply the number of samples per pixel:
 
 Remarks
 
-Swift does not seem to be particularly suited to running this application.
-
 On a MacBook Pro (Retina, 15-inch, Early 2013):
 
-Language | time seconds
----------|-------------
-C |
-Swift |
+Language              | time (seconds)
+----------------------|-------------
+C++ single threaded   |  5.6s
+Swift single threaded | 13.8s (Of which 5.6s is rendering, 8s file i/o)
+Swift GCD             |  9.8s (Of which 1s is rendering, 8s file i/o)
 
+TODO:
+
+Speed up Swift file output.
