@@ -34,6 +34,7 @@ class FileStream : OutputStream {
 }
 
 let stderr = StandardErrorOutputStream()
+
 struct Vec {
   let x, y, z : Double
   init() { self.init(x:0, y:0, z:0) }
@@ -53,7 +54,9 @@ func %(a :Vec, b : Vec) -> Vec{
 }
 
 struct Ray { let o, d : Vec; init(o : Vec, d : Vec) {self.o = o; self.d = d}}
+
 enum Refl_t { case DIFF; case SPEC; case REFR }  // material types, used in radiance()
+
 struct Sphere {
   let rad : Double       // radius
   let p, e, c : Vec      // position, emission, color
@@ -62,16 +65,23 @@ struct Sphere {
     self.rad = rad; self.p = p; self.e = e; self.c = c; self.refl = refl; }
   func intersect(r: Ray) -> Double { // returns distance, 0 if nohit
     let op = p-r.o // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
-    let eps=1e-4, b=op.dot(r.d), det=b*b-op.dot(op)+rad*rad
-    if (det<0) {return 0}
+    let eps = 1e-4
+    let b = op.dot(r.d)
+    let det = b*b-op.dot(op)+rad*rad
+    if (det<0) {
+      return 0
+    }
     let det2=sqrt(det)
     let t=b-det2
-    if t > eps {return t}
+    if t > eps {
+      return t
+    }
     let t2 = b+det2
-    if t > eps {return t2}
+    if t2 > eps {return t2}
     return 0
   }
 }
+
 let spheres :[Sphere] = [//Scene: radius, position, emission, color, material
   Sphere(rad:1e5, p:Vec(x: 1e5+1,y:40.8,z:81.6), e:Vec(), c:Vec(x:0.75,y:0.25,z:0.25), refl:Refl_t.DIFF),//Left
   Sphere(rad:1e5, p:Vec(x:-1e5+99,y:40.8,z:81.6),e:Vec(), c:Vec(x:0.25,y:0.25,z:0.75), refl:Refl_t.DIFF),//Rght
@@ -84,14 +94,19 @@ let spheres :[Sphere] = [//Scene: radius, position, emission, color, material
   Sphere(rad:600, p:Vec(x:50,y:681.6-0.27,z:81.6),e:Vec(x:12,y:12,z:12),   c:Vec(),  refl:Refl_t.DIFF) //Lite
 ]
 func clamp(x : Double) -> Double { return x<0 ? 0 : x>1 ? 1 : x; }
+
 func toInt(x : Double) -> Int { return Int(pow(clamp(x),1/2.2)*255+0.5); }
+
 func intersect(r : Ray, inout t: Double, inout id: Int) -> Bool {
   let n = spheres.count
-  let inf=1e20
-  var t = inf
+  let inf = 1e20
+  t = inf
   for (var i = n-1; i >= 0; i--) {
     let d = spheres[i].intersect(r)
-    if (d != 0.0 && d<t){t=d;id=i;}
+    if (d != 0.0 && d<t){
+      t=d
+      id=i
+    }
   }
   return t<inf
 }
@@ -104,18 +119,18 @@ struct drand {
   func next() -> Double { return erand48(pbuffer) }
 }
 
-func radiance(r: Ray, depth: Int, Xi : drand) -> Vec {
+func radiance(r: Ray, depthIn: Int, Xi : drand) -> Vec {
   var t : Double = 0                               // distance to intersection
-  var id : Int  = 0                             // id of intersected object
+  var id : Int = 0                             // id of intersected object
   if (!intersect(r, &t, &id)) {return Vec() } // if miss, return black
   let obj = spheres[id]        // the hit object
   let x=r.o+r.d*t
   let n=(x-obj.p).norm()
   let nl = (n.dot(r.d) < 0) ? n : n * -1
   var f=obj.c
-  let p = f.x>f.y && f.x>f.z ? f.x : f.y>f.z ? f.y : f.z; // max refl
-  let depth = depth+1
-  // Russian Roulette
+  let p = f.x > f.y && f.x > f.z ? f.x : f.y > f.z ? f.y : f.z; // max refl
+  let depth = depthIn+1
+  // Russian Roulette:
   if (depth>5) {
     if (Xi.next()<p) {
       f=f*(1/p)
@@ -123,40 +138,40 @@ func radiance(r: Ray, depth: Int, Xi : drand) -> Vec {
       return obj.e
     }
   }
-  if (obj.refl == Refl_t.DIFF) {                  // Ideal DIFFUSE reflection
+  switch (obj.refl) {
+  case Refl_t.DIFF:                  // Ideal DIFFUSE reflection
     let r1=2*M_PI*Xi.next(), r2=Xi.next(), r2s=sqrt(r2);
-    let w=nl
-    let bignlx = fabs(w.x)>0.1
-    let tempv = bignlx ? Vec(x: 0, y: 1, z: 0) : Vec(x: 1, y: 0, z: 0)
-    let u = tempv%w.norm()
+    let w = nl
+    let u = ((fabs(w.x)>0.1 ? Vec(x:0, y:1, z:0) : Vec(x:1, y:0, z:0)) % w).norm()
     let v = w % u
     let d = (u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2)).norm()
     return obj.e + f * radiance(Ray(o: x, d:d), depth, Xi)
-  } else if (obj.refl == Refl_t.SPEC) {            // Ideal SPECULAR reflection
+  case Refl_t.SPEC: // Ideal SPECULAR reflection
     return obj.e + f * (radiance(Ray(o:x, d:r.d-n*2*n.dot(r.d)), depth, Xi))
+  case Refl_t.REFR:
+    let reflRay = Ray(o:x, d:r.d-n*2*n.dot(r.d))    // Ideal dielectric REFRACTION
+    let into = n.dot(nl)>0                // Ray from outside going in?
+    let nc = 1, nt=1.5
+    let nnt = into ? Double(nc) / nt : nt / Double(nc)
+    let ddn = r.d.dot(nl)
+    let cos2t=1-nnt*nnt*(1-ddn*ddn)
+    if (cos2t<0) {    // Total internal reflection
+      return obj.e + f * radiance(reflRay, depth, Xi)
+    }
+    let tdir = (r.d * nnt - n * ((into ? 1 : -1)*(ddn*nnt+sqrt(cos2t)))).norm()
+    let a = nt-Double(nc), b = nt+Double(nc), R0 = a*a/(b*b), c = 1-(into ? -ddn : tdir.dot(n))
+    let Re=R0+(1-R0)*c*c*c*c*c,Tr=1-Re,P=0.25+0.5*Re,RP=Re/P,TP=Tr/(1-P)
+    return obj.e + f * (depth>2 ? (Xi.next()<P ?   // Russian roulette
+      radiance(reflRay,depth,Xi) * RP : radiance(Ray(o: x, d: tdir),depth,Xi)*TP) :
+      radiance(reflRay,depth,Xi) * Re + radiance(Ray(o: x, d: tdir),depth,Xi)*Tr);
   }
-  let reflRay = Ray(o:x, d:r.d-n*2*n.dot(r.d))    // Ideal dielectric REFRACTION
-  let into = n.dot(nl)>0                // Ray from outside going in?
-  let nc = 1, nt=1.5
-  let nnt = into ? Double(nc) / nt : nt / Double(nc)
-  let ddn = r.d.dot(nl)
-  let cos2t=1-nnt*nnt*(1-ddn*ddn)
-  if (cos2t<0) {    // Total internal reflection
-    return obj.e + f * radiance(reflRay, depth, Xi)
-  }
-  let tdir = (r.d * nnt - n * ((into ? 1 : -1)*(ddn*nnt+sqrt(cos2t)))).norm()
-  let a = nt-Double(nc), b = nt+Double(nc), R0 = a*a/(b*b), c = 1-(into ? -ddn : tdir.dot(n))
-  let Re=R0+(1-R0)*c*c*c*c*c,Tr=1-Re,P=0.25+0.5*Re,RP=Re/P,TP=Tr/(1-P)
-  return obj.e + f * (depth>2 ? (Xi.next()<P ?   // Russian roulette
-    radiance(reflRay,depth,Xi) * RP : radiance(Ray(o: x, d: tdir),depth,Xi)*TP) :
-    radiance(reflRay,depth,Xi) * Re + radiance(Ray(o: x, d: tdir),depth,Xi)*Tr);
 }
 
 
 func main() {
   let argc = C_ARGC, argv = C_ARGV
-  // let w=1024, h=768
-  let w = 40, h = 30
+  let w=1024, h=768
+  // let w = 40, h = 30
   let samps = argc==2 ? Int(atoi(argv[1])/4) : 1 // # samples
   let cam = Ray(o:Vec(x:50,y:52,z:295.6), d:Vec(x:0,y:-0.042612,z:-1).norm()) // cam pos, dir
   let cx = Vec(x:Double(w) * 0.5135 / Double(h), y:0, z:0)
