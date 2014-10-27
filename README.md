@@ -19,7 +19,8 @@ to Swift.
     ./smallpt
     open image.ppm
 
-You can also supply the number of samples per pixel:
+You can also run the swift file directly. And in either case you can
+supply the number of samples per pixel. (Default = 4 samples per pixel.):
 
     ./smallpt.swift 512 && open image.ppm
 
@@ -28,10 +29,10 @@ You can also supply the number of samples per pixel:
 On a MacBook Pro (Retina, 15-inch, Early 2013):
 
 Language              | time (seconds)
-----------------------|-------------
-C++ single threaded   |  5.6s
-Swift single threaded | 13.8s (Of which 5.6s is rendering, 8s file i/o)
-Swift GCD             |  9.8s (Of which 1s is rendering, 8s file i/o)
+----------------------|---------------------------------------------------
+C++ single threaded   |  5.6 s
+Swift single threaded | 13.8 s (of which 5.6s is rendering, 8s file output)
+Swift GCD             |  9.8 s (of which 1s is rendering, 8s file output)
 
 ## Discussion
 
