@@ -3,6 +3,10 @@ Small Path Tracer in Swift
 This is a straightforward translation of http://www.kevinbeason.com/smallpt/
 to Swift.
 
+Example Image
+
+![An example output image](image.jpg)
+
 Setup
 
 + Install Xcode 6.1
