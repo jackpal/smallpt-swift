@@ -132,7 +132,8 @@ func radiance(r: Ray, depthIn: Int, Xi : drand) -> Vec {
   let depth = depthIn+1
   // Russian Roulette:
   if (depth>5) {
-    if (Xi.next()<p) {
+    // Limit depth to 150 to avoid stack overflow.
+    if (depth < 150 && Xi.next()<p) {
       f=f*(1/p)
     } else {
       return obj.e

@@ -30,6 +30,4 @@ Swift GCD             |  9.8s (Of which 1s is rendering, 8s file i/o)
 
 Bugs:
 
- - Swift File I/O seems to be very slow.
-
- - We crash with "Illegal Instruction" errors with large spp values.
+ - Swift File I/O seems to be slow.
