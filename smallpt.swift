@@ -170,7 +170,6 @@ func radiance(r: Ray, depthIn: Int, Xi : drand) -> Vec {
 
 func main() {
   let mainQueue = dispatch_get_main_queue()
-  let collectQueue = dispatch_queue_create("collectQueue", nil)
   dispatch_async(mainQueue) {
     let argc = C_ARGC, argv = C_ARGV
     let w=1024, h=768
@@ -206,19 +205,15 @@ func main() {
           }
         }
         let result = r*0.25
-        dispatch_async(collectQueue) {
-          c[i] = result
-        }
+        c[i] = result
       }
     }
-    dispatch_async(collectQueue) {
-      let f = FileStream(path: "image.ppm")         // Write image to PPM file.
-      f.write("P3\n\(w) \(h)\n\(255)\n")
-      for (var i=0; i<w*h; i++) {
-        f.write("\(toInt(c[i].x)) \(toInt(c[i].y)) \(toInt(c[i].z)) ")
-      }
-      exit(0)
+    let f = FileStream(path: "image.ppm")         // Write image to PPM file.
+    f.write("P3\n\(w) \(h)\n\(255)\n")
+    for (var i=0; i<w*h; i++) {
+      f.write("\(toInt(c[i].x)) \(toInt(c[i].y)) \(toInt(c[i].z)) ")
     }
+    exit(0)
   }
   dispatch_main();
 }
