@@ -31,8 +31,8 @@ On a MacBook Pro (Retina, 15-inch, Early 2013):
 Language              | time (seconds)
 ----------------------|---------------------------------------------------
 C++ single threaded   | 5.6 s
-Swift single threaded | 13.8 s (of which 5.6s is rendering, 8s file output)
-Swift GCD             | 9.8 s (of which 1s is rendering, 8s file output)
+Swift single threaded | 13.8 s (of which 5.6 s is rendering, 8 s is file output)
+Swift GCD             | 9.8 s (of which 1 s is rendering, 8 s is file output)
 
 ## Discussion
 
