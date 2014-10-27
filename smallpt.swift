@@ -1,4 +1,4 @@
-#!/usr/bin/env xcrun swift
+#!/usr/bin/env xcrun swift -O
 
 // Smallpt in swift
 // Based on http://www.kevinbeason.com/smallpt/
