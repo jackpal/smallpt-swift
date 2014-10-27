@@ -28,6 +28,8 @@ C++ single threaded   |  5.6s
 Swift single threaded | 13.8s (Of which 5.6s is rendering, 8s file i/o)
 Swift GCD             |  9.8s (Of which 1s is rendering, 8s file i/o)
 
-TODO:
+Bugs:
 
-Speed up Swift file output.
+ - Swift File I/O seems to be very slow.
+
+ - We crash with "Illegal Instruction" errors with large spp values.
